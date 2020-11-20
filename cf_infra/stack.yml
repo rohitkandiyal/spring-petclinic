@@ -93,12 +93,11 @@ Resources:
           systemctl daemon-reload
           systemctl start jenkins
           yum install ansible -y
-
       NetworkInterfaces:
         - DeleteOnTermination: 'true'
           AssociatePublicIpAddress: 'true'
           DeviceIndex: 0
-          #SubnetId: !Ref subnetA                                          #Public subnet ID
+          #SubnetId: !Ref PublicSubnet                                          #Public subnet ID
           SubnetId: subnet-0e27a37cbaece2f5b
           GroupSet:
             - !Ref PublicServerSG
@@ -128,3 +127,32 @@ Resources:
             - ':'
             - - !Ref 'AWS::StackName'
               - public-server-sg
+  
+  PrivateEC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceInitiatedShutdownBehavior: stop
+      ImageId: ami-07a0da1997b55b23e
+      InstanceType: t2.micro
+      KeyName: !Ref EC2KeyPair
+      Monitoring: 'false'
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ':'
+            - - !Ref 'AWS::StackName'
+              - private-instance
+        - Key: 'owner'
+          Value: demo-poc
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          echo "private" >> /home/ec2-user/rohit.txt
+      NetworkInterfaces:
+        - DeleteOnTermination: 'true'
+          AssociatePublicIpAddress: 'false'
+          DeviceIndex: 0
+          #SubnetId: !Ref PrivateSubnet                                          #Private subnet ID
+          SubnetId: subnet-0bacfb228c3374ff7
+          #GroupSet:
+          #  - !Ref PrivateServerSG

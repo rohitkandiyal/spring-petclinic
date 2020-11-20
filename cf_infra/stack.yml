@@ -32,6 +32,88 @@ Resources:
           Value: !Sub 'vpc:${AWS::StackName}'
         - Key: 'nice:stack-name'
           Value: !Ref 'AWS::StackName'
+
+  internetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ':'
+            - - !Ref 'AWS::StackName'
+              - internetGateway
+
+  gatewayAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref StackVPC
+      InternetGatewayId: !Ref internetGateway
+
+  publicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref StackVPC
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ':'
+            - - !Ref 'AWS::StackName'
+              - publicRouteTable
+
+  RouteTableAssociationPublicSubnet:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref publicRouteTable
+  
+  route1:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !Ref publicRouteTable
+      GatewayId: !Ref internetGateway
+    DependsOn: gatewayAttachment
+
+  NATGatewayPublicSubnet:
+    DependsOn: gatewayAttachment
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      AllocationId: !GetAtt
+        - EIPNatGatwaySubnet
+        - AllocationId
+      SubnetId: !Ref PublicSubnet
+  EIPNatGatwaySubnet:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: myVPC
+  
+  privateRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref StackVPC
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ':'
+            - - !Ref 'AWS::StackName'
+              - privateRouteTable
+
+  RouteTableAssociationPrivateSubnet:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PrivateSubnet
+      RouteTableId: !Ref privateRouteTable
+   
+  route2:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !Ref privateRouteTable
+      NatGatewayId: !Ref NATGatewayPublicSubnet
+    DependsOn: NATGatewayPublicSubnet
+
+
+
   PublicSubnet:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -177,4 +259,4 @@ Resources:
           Value: !Join
             - ':'
             - - !Ref 'AWS::StackName'
-              - public-server-sg
+              - private-server-sg

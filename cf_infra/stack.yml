@@ -154,5 +154,27 @@ Resources:
           DeviceIndex: 0
           #SubnetId: !Ref PrivateSubnet                                          #Private subnet ID
           SubnetId: subnet-0bacfb228c3374ff7
-          #GroupSet:
-          #  - !Ref PrivateServerSG
+          GroupSet:
+            - !Ref PrivateServerSG
+  
+  PrivateServerSG:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Private Server Security Group
+      #VpcId: !Ref myVPC                                                    # change VPC ID
+      VpcId: vpc-05c14ad6e10af3d90
+      GroupName: Private-Server-SG
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 10.221.30.0/24                                                #Cidr of public subnet
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ':'
+            - - !Ref 'AWS::StackName'
+              - public-server-sg

@@ -84,8 +84,16 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
-          echo "rohit" >> /home/ec2-user/rohit.txt
-          echo "Region is ${AWS::Region}" >> /home/ec2-user/rohit.txt
+          echo "abcd" >> /home/ec2-user/rohit.txt
+          yum upgrade -y
+          amazon-linux-extras install epel -y
+          wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat/jenkins.repo
+          rpm --import https://pkg.jenkins.io/redhat/jenkins.io.key
+          yum install jenkins java-1.8.0-openjdk-devel -y
+          systemctl daemon-reload
+          systemctl start jenkins
+          yum install ansible -y
+
       NetworkInterfaces:
         - DeleteOnTermination: 'true'
           AssociatePublicIpAddress: 'true'
@@ -106,6 +114,10 @@ Resources:
         - IpProtocol: tcp
           FromPort: '22'
           ToPort: '22'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '8080'
+          ToPort: '8080'
           CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
         - IpProtocol: '-1'

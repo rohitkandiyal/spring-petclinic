@@ -1,0 +1,118 @@
+AWSTemplateFormatVersion: 2010-09-09
+Mappings:
+  Environments:
+    dev:
+      VPCCidrBlock: 172.20.0.0/16
+      PublicSubnet: 172.20.10.0/24
+      PrivateSubnet: 172.20.20.0/24
+
+Parameters:
+  EnvironmentType:
+    Type: String
+    Default: dev
+  EC2KeyPair:                                                         #Add the created key name here
+    Description: Name of an existing EC2 Server KeyPair
+    Type: 'AWS::EC2::KeyPair::KeyName'
+    MinLength: '1'
+    Default: icpune-perf-jump-server
+
+Resources:
+  StackVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: !FindInMap
+        - Environments
+        - !Ref EnvironmentType
+        - VPCCidrBlock
+      InstanceTenancy: default
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      Tags:
+        - Key: Name
+          Value: !Sub 'vpc:${AWS::StackName}'
+        - Key: 'nice:stack-name'
+          Value: !Ref 'AWS::StackName'
+  PublicSubnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !FindInMap
+        - Environments
+        - !Ref EnvironmentType
+        - PublicSubnet
+      AvailabilityZone: us-west-2a
+      MapPublicIpOnLaunch: 'false'
+      VpcId: !Ref StackVPC
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ':'
+            - - !Ref 'AWS::StackName'
+              - public-subnet
+  PrivateSubnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !FindInMap
+        - Environments
+        - !Ref EnvironmentType
+        - PrivateSubnet
+      AvailabilityZone: us-west-2a
+      MapPublicIpOnLaunch: 'false'
+      VpcId: !Ref StackVPC
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ':'
+            - - !Ref 'AWS::StackName'
+              - private-subnet
+
+  PublicEC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceInitiatedShutdownBehavior: stop
+      ImageId: ami-07a0da1997b55b23e
+      InstanceType: t2.micro
+      KeyName: !Ref EC2KeyPair
+      Monitoring: 'false'
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ':'
+            - - !Ref 'AWS::StackName'
+              - public-instance
+        - Key: 'owner'
+          Value: demo-poc
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          echo "rohit" >> /home/ec2-user/rohit.txt
+          echo "Region is ${AWS::Region}" >> /home/ec2-user/rohit.txt
+      NetworkInterfaces:
+        - DeleteOnTermination: 'true'
+          AssociatePublicIpAddress: 'true'
+          DeviceIndex: 0
+          #SubnetId: !Ref subnetA                                          #Public subnet ID
+          SubnetId: subnet-0e27a37cbaece2f5b
+          GroupSet:
+            - !Ref PublicServerSG
+             
+  PublicServerSG:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Public Server Security Group
+      #VpcId: !Ref myVPC                                                    # change VPC ID
+      VpcId: vpc-05c14ad6e10af3d90
+      GroupName: Public-Server-SG
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ':'
+            - - !Ref 'AWS::StackName'
+              - public-server-sg

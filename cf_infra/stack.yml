@@ -112,41 +112,6 @@ Resources:
       NatGatewayId: !Ref NATGatewayPublicSubnet
     DependsOn: NATGatewayPublicSubnet
 
-
-
-  PublicSubnet:
-    Type: 'AWS::EC2::Subnet'
-    Properties:
-      CidrBlock: !FindInMap
-        - Environments
-        - !Ref EnvironmentType
-        - PublicSubnet
-      AvailabilityZone: us-west-2a
-      MapPublicIpOnLaunch: 'false'
-      VpcId: !Ref StackVPC
-      Tags:
-        - Key: Name
-          Value: !Join
-            - ':'
-            - - !Ref 'AWS::StackName'
-              - public-subnet
-  PrivateSubnet:
-    Type: 'AWS::EC2::Subnet'
-    Properties:
-      CidrBlock: !FindInMap
-        - Environments
-        - !Ref EnvironmentType
-        - PrivateSubnet
-      AvailabilityZone: us-west-2a
-      MapPublicIpOnLaunch: 'false'
-      VpcId: !Ref StackVPC
-      Tags:
-        - Key: Name
-          Value: !Join
-            - ':'
-            - - !Ref 'AWS::StackName'
-              - private-subnet
-
   PublicEC2Instance:
     Type: 'AWS::EC2::Instance'
     Properties:
@@ -229,7 +194,11 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
-          echo "private" >> /home/ec2-user/rohit.txt
+          echo "private1" >> /home/ec2-user/rohit.txt
+          yum update -y
+          amazon-linux-extras install docker -y
+          systemctl start docker
+          usermod -a -G docker ec2-user
       NetworkInterfaces:
         - DeleteOnTermination: 'true'
           AssociatePublicIpAddress: 'false'
